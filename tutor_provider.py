@@ -17,6 +17,36 @@ from google.genai import types
 ExplanationStyle = Literal["steps", "analogy", "example"]
 STYLES: tuple[ExplanationStyle, ...] = ("steps", "analogy", "example")
 
+# Free-tier Gemini quota is per-day AND per-model, so an exhausted model is
+# dead for ~17 hours while its neighbours are untouched. Ordered closest-first
+# so quality degrades gradually. Mirrors tutor_agent.config.MODEL_FALLBACKS.
+MODEL_FALLBACKS: tuple[str, ...] = (
+    "gemini-flash-latest",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+)
+
+_dead_models: set[str] = set()
+
+
+def _is_daily_quota(error: APIError) -> bool:
+    """True for the per-day quota only, not a per-minute burst 429."""
+    if error.code != 429:
+        return False
+    blob = str(error).lower()
+    return "per day" in blob or "perday" in blob or "free_tier" in blob
+
+
+def _next_live_model(current: str) -> str | None:
+    """Next model not yet known to be exhausted, or None when all are."""
+    _dead_models.add(current)
+    for name in MODEL_FALLBACKS:
+        if name not in _dead_models:
+            return name
+    return None
+
 
 class TutorResponse(TypedDict):
     answers: dict[str, str]
@@ -176,7 +206,8 @@ class GeminiTutor:
             f"{style_instruction}\n"
             f"Student question: {prompt}"
         )
-        for attempt in range(1, self.max_attempts + 1):
+        attempt = 0
+        while attempt < self.max_attempts:
             try:
                 response = self.client.models.generate_content(
                     model=self.model,
@@ -189,8 +220,26 @@ class GeminiTutor:
                 )
                 break
             except APIError as error:
+                # Free-tier Gemini enforces a per-DAY request quota that is
+                # scoped per model, and its retryDelay is ~17 hours. Backing
+                # off is pointless; the next model has its own full bucket.
+                # Without this the tutor dies on stage with "429
+                # RESOURCE_EXHAUSTED after 3 attempts" while five other models
+                # sit idle. tutor_agent/runner.py does the same thing.
+                if _is_daily_quota(error):
+                    nxt = _next_live_model(self.model)
+                    if nxt is not None:
+                        self.model = nxt
+                        continue
+                    raise TutorProviderError(
+                        "Every fallback model has exhausted its free-tier "
+                        "daily quota. Switch the sidebar's tutor provider to "
+                        "Demo to keep going offline, or enable billing on "
+                        "the Google Cloud project that owns this API key."
+                    ) from error
+                attempt += 1
                 retryable = error.code in {408, 429, 500, 502, 503, 504}
-                if not retryable or attempt == self.max_attempts:
+                if not retryable or attempt >= self.max_attempts:
                     status = f"{error.code} {error.status or ''}".strip()
                     attempts = (
                         f" after {attempt} attempts"

@@ -815,6 +815,113 @@ def render_replay(all_results: list[dict[str, Any]]) -> None:
     show_score_chart(records)
 
 
+def render_live_sim() -> None:
+    """Watch the agent learn a cohort of simulated students, round by round.
+
+    The replay view shows a finished run; this one shows the learning happening.
+    sim.stream() is a generator, so every round is drawn as it is scored rather
+    than after the whole run completes.
+
+    Speed is the honest constraint here. The mock agent is pure Python: a
+    couple of hundred rounds land in seconds and cost nothing. The real agent
+    is one to three Gemini calls per round at two to four seconds each, so the
+    same run takes roughly twenty minutes and several hundred calls. Both are
+    offered; the sidebar says which one is running, because a chart drawn by
+    the mock agent proves the mechanism works, not that Gemini learns.
+    """
+    import sim
+
+    st.sidebar.markdown("---")
+    use_mock = st.sidebar.radio(
+        "Agent",
+        ("Mock (instant, free)", "Gemini (real, slow)"),
+        help="The mock agent is a plain Python tally. It proves the loop and "
+             "the chart work. Only the Gemini run is evidence the agent learns.",
+    ).startswith("Mock")
+    names = st.sidebar.multiselect(
+        "Students", sorted(sim.make_students(0)), default=sim.HEADLINE_STUDENTS
+    )
+    rounds = st.sidebar.slider("Rounds each", 5, 60, 30 if use_mock else 10)
+    delay = st.sidebar.slider("Seconds per round", 0.0, 2.0, 0.15 if use_mock else 0.0, 0.05,
+                              help="Slow it down so an audience can follow.")
+    every = st.sidebar.slider("Force a style every N rounds", 0, 6, 3,
+                              help="0 turns interventions off. Watch Maya's "
+                                   "line with it on and off.")
+
+    if not names:
+        st.info("Pick at least one student in the sidebar.")
+        return
+    if not use_mock:
+        st.warning(
+            f"A real run is about {len(names) * rounds} rounds and "
+            f"{len(names) * rounds * 2} Gemini calls. The free tier allows 20 "
+            "per model per day."
+        )
+    if not st.button("Run the simulation", type="primary"):
+        st.caption("The agent starts knowing nothing. Watch the line climb.")
+        return
+
+    # Order matters: the counters and the chart are what an audience watches,
+    # so they go above the feed. Creating the columns after feed_box would
+    # push them below it and off the bottom of the screen.
+    boxes = [c.empty() for c in st.columns(4)]
+    chart_box = st.empty()
+    st.caption("Each line is one student. Flat line is random guessing.")
+    feed_box = st.empty()
+    feed: list[str] = []
+
+    try:
+        for row in sim.stream(names, rounds, 42, use_mock, delay, every,
+                              results_file=ROOT / "results_live.json"):
+            log = row["_log"]
+            frame = {}
+            for n in names:
+                rows = [x for x in log if x["student"] == n]
+                if rows:
+                    frame[n.capitalize()] = sim.know_you_scores(rows)
+            width = max((len(v) for v in frame.values()), default=0)
+            frame = {k: v + [None] * (width - len(v)) for k, v in frame.items()}
+            frame["Random baseline"] = [sim.RANDOM_BASELINE] * width
+            chart_box.line_chart(frame, height=320)
+
+            # scored_halves yields (hit, luck_rate) pairs, not bare booleans:
+            # the baseline is per-half, because an intervention round scores
+            # only the 1-in-2 outcome half and not the 1-in-3 pick half.
+            halves = [h for x in log for h in scored_halves(x)]
+            boxes[0].metric("Rounds", len(log))
+            boxes[1].metric(
+                "Know-you score",
+                f"{sum(hit for hit, _ in halves) / len(halves):.0%}" if halves else "-",
+            )
+            boxes[2].metric(
+                "Random baseline",
+                f"{sum(luck for _, luck in halves) / len(halves):.0%}" if halves else "-",
+            )
+            boxes[3].metric("Interventions",
+                            sum(1 for x in log if x["forced_style"]))
+
+            mark = "--" if row["pick_hit"] is None else ("HIT" if row["pick_hit"] else "miss")
+            feed.insert(0, (
+                f"`r{row['round']:>2}` **{row['student']}** "
+                f"{'· forced ' + row['forced_style'] + ' ' if row['forced_style'] else ''}"
+                f"predicted *{row['pred_pick']}* → read *{row['actual_pick']}*, "
+                f"{'got it right' if row['actual_correct'] else 'got it wrong'} "
+                f"· pick {mark} · outcome {'HIT' if row['correct_hit'] else 'miss'}"
+            ))
+            feed_box.markdown("\n\n".join(feed[:12]))
+    except Exception as error:  # noqa: BLE001 - a dead quota must not crash the demo
+        st.error(f"The run stopped: {error}")
+        st.caption("Switch the sidebar Agent to Mock to keep going offline.")
+        return
+
+    st.success(f"Done. {len(names) * rounds} rounds. Saved to results_live.json")
+    st.caption(
+        "Mock agent: this shows the loop and the chart work, not that Gemini learns."
+        if use_mock else
+        "Real Gemini agent: this is the result that counts."
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="The tutor that learns the student",
@@ -823,9 +930,14 @@ def main() -> None:
     )
     st.title("The tutor that learns the student")
     st.caption("Ask a question. Get an explanation that fits how you like to learn.")
-    mode = st.sidebar.radio("App view", ("Tutor chat", "Replay simulation"))
+    mode = st.sidebar.radio(
+        "App view", ("Tutor chat", "Live simulation", "Replay simulation")
+    )
     if mode == "Replay simulation":
         render_replay(load_results())
+        return
+    if mode == "Live simulation":
+        render_live_sim()
         return
 
     student_id = st.sidebar.text_input("Student name", value="judge").strip()

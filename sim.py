@@ -277,6 +277,32 @@ def to_notes(obj):
 # ---------------------------------------------------------------------------
 
 def run(student_names, rounds, seed, use_mock, sleep, intervene_every=3):
+    """Run to completion, printing as it goes. The CLI entry point."""
+    log = []
+    for row in stream(student_names, rounds, seed, use_mock, sleep, intervene_every):
+        log = row["_log"]
+        print(f"r{row['round']:2d} predicted {row['pred_pick']:7s}/"
+              f"{'right' if row['pred_correct'] else 'wrong':5s} "
+              f"actual {row['actual_pick']:7s}/"
+              f"{'right' if row['actual_correct'] else 'wrong':5s} "
+              f"{'--  ' if row['pick_hit'] is None else ('HIT ' if row['pick_hit'] else 'miss')} "
+              f"{'HIT ' if row['correct_hit'] else 'miss'}"
+              f"{'  [forced ' + row['forced_style'] + ']' if row['forced_style'] else ''}")
+    print(f"\nSaved {len(log)} rounds to {RESULTS_FILE}")
+    return log
+
+
+def stream(student_names, rounds, seed, use_mock, sleep, intervene_every=3,
+           results_file=None):
+    """Yield one scored round at a time, as it happens.
+
+    A generator rather than a function that returns at the end, so a UI can
+    draw the know-you score climbing round by round instead of staring at a
+    spinner for twenty minutes. Each yielded row carries the running log
+    under "_log" so a caller can redraw the whole chart without keeping its
+    own copy.
+    """
+    results_file = results_file or RESULTS_FILE
     questions = load_questions()
     students = make_students(seed)
     log = []
@@ -348,18 +374,12 @@ def run(student_names, rounds, seed, use_mock, sleep, intervene_every=3):
             }
             log.append(row)
             # Save every round, so a crash or rate limit never loses the run.
-            RESULTS_FILE.write_text(json.dumps(log, indent=2), encoding="utf-8")
+            results_file.write_text(json.dumps(log, indent=2), encoding="utf-8")
 
-            print(f"r{r:2d} predicted {pred_pick:7s}/{'right' if pred_correct else 'wrong':5s} "
-                  f"actual {actual_pick:7s}/{'right' if actual_correct else 'wrong':5s} "
-                  f"{'--  ' if pick_hit is None else ('HIT ' if pick_hit else 'miss')} "
-                  f"{'HIT ' if correct_hit else 'miss'}"
-                  f"{'  [forced ' + forced + ']' if forced else ''}")
+            yield {**row, "_log": log}
 
             if sleep and not use_mock:
                 time.sleep(sleep)
-
-    print(f"\nSaved {len(log)} rounds to {RESULTS_FILE}")
     return log
 
 

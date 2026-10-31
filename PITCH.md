@@ -23,7 +23,7 @@ appear side by side. Choose one and it becomes the saved style for the next
 question. Ask for a definition and there is no unnecessary knowledge check;
 ask how to solve a problem and the tutor asks a related follow-up. The Gemini
 provider generates the explanations and follow-up question using the
-`GOOGLE_API_KEY` from `my_agent/.env`; the UI warns that prompts and saved
+`GOOGLE_API_KEY` from `.env`; the UI warns that prompts and saved
 style preferences are sent to Google. A local demo provider remains available
 for offline UI testing.
 

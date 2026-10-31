@@ -225,6 +225,7 @@ def update(
     actual: Mapping[str, Any],
     *,
     question: str | None = None,
+    confirming: bool = False,
 ) -> str:
     """Rewrite the profile after a prediction was contradicted.
 
@@ -380,14 +381,40 @@ def run_round(
     # ``pick_hit is None`` means the pick was never predicted (intervention
     # round). That is not a miss, so it must not drag the profile into a
     # rewrite on its own.
+    #
+    # But a miss is not the only thing worth learning from. Rewriting only on
+    # failure silently discards every piece of CONFIRMING evidence -- and on
+    # an intervention round that is precisely the evidence we paid a round to
+    # go and get. The case that matters: the tutor forces Maya to read a
+    # worked example, she gets it right, the agent predicted she would, and
+    # because that is a hit the profile is left untouched. "Examples are what
+    # actually help Maya" is the one fact this entire project exists to
+    # discover, and the passive version of this loop throws it away.
+    #
+    # So an intervention round always folds its observation into the profile,
+    # hit or miss. Ordinary rounds still only rewrite on a miss: re-confirming
+    # a preference the profile already predicted correctly costs a model call
+    # and teaches nothing.
     missed = (log["pick_hit"] is False) or (log["correct_hit"] is False)
-    if missed:
+    log["confirming"] = bool(force_style) and not missed
+    if missed or log["confirming"]:
         while attempts < max_repair_attempts:
             attempts += 1
             try:
                 candidate = update(
-                    notes_before, pred, actual, question=question_text
+                    notes_before,
+                    pred,
+                    actual,
+                    question=question_text,
+                    confirming=log["confirming"],
                 )
+                if log["confirming"]:
+                    # Nothing to verify: the prediction was already right, so
+                    # a recheck can only spend a model call to re-learn what
+                    # we know. Bank the evidence and move on.
+                    notes_after = candidate
+                    repaired = True
+                    break
                 recheck = predict(candidate, question_text, force_style)
             except AgentCallError:
                 # A failed rewrite is treated exactly like a rejected one:

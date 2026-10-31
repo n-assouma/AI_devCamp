@@ -174,16 +174,21 @@ def predictor_request(
 
 
 # ==========================================================================
-# 3. UPDATER  --  runs only when the sealed prediction was wrong
+# 3. UPDATER  --  runs on a wrong prediction, or on confirmed intervention evidence
 # ==========================================================================
 
 
 def updater_instruction(styles: list[str] | None = None) -> str:
     styles = list(STYLES if styles is None else styles)
     return f"""\
-You maintain a living profile of one maths student. You are called only when
-the profile FAILED: it produced a prediction that the student contradicted.
-Rewrite the profile so that it would have predicted the truth.
+You maintain a living profile of one maths student.
+
+You are called in two situations, and the request will tell you which:
+1. The profile FAILED -- it produced a prediction the student contradicted.
+   Rewrite it so that it would have predicted the truth.
+2. The profile was CONFIRMED on a round the tutor deliberately engineered to
+   test something. Nothing is wrong; bank the evidence and make the profile
+   state more confidently what it was only guessing at before.
 
 The profile has one job: to let a reader who can see nothing but the profile
 and the next question predict what this student will do. It is a predictive
@@ -258,8 +263,14 @@ def updater_request(
     actual: dict,
     *,
     question: str | None = None,
+    confirming: bool = False,
 ) -> str:
-    """The user-turn message for one profile rewrite."""
+    """The user-turn message for one profile rewrite.
+
+    ``confirming=True`` marks an intervention round the profile got RIGHT.
+    There is no error to correct; the job is to bank evidence the tutor spent
+    a round going out to collect, which a failure-only loop would discard.
+    """
     notes = (profile_notes or "").strip() or "(empty -- no observations yet)"
     lines = [
         "CURRENT PROFILE:",
@@ -278,11 +289,27 @@ def updater_request(
     ]
     if question:
         lines += ["", "THE QUESTION THEY WERE WORKING ON (context only):", question]
-    lines += [
-        "",
-        "Rewrite the profile so it accounts for this. Labelled lines, "
-        f"under {MAX_PROFILE_WORDS} words, general rules only.",
-    ]
+    if confirming:
+        lines += [
+            "",
+            "THIS IS CONFIRMING EVIDENCE, NOT A CORRECTION. The tutor CHOSE "
+            f"to show them the {actual.get('pick')!r} explanation to find out "
+            "what it would do, and the profile predicted the outcome "
+            "correctly. Nothing here is wrong.",
+            "",
+            "Strengthen the profile with what this round confirms -- "
+            "especially about which explanation actually helps them answer "
+            "correctly, as opposed to which one they would have picked. Keep "
+            "everything still true, drop nothing that still holds, and do not "
+            "weaken a claim this round supports. Labelled lines, under "
+            f"{MAX_PROFILE_WORDS} words, general rules only.",
+        ]
+    else:
+        lines += [
+            "",
+            "Rewrite the profile so it accounts for this. Labelled lines, "
+            f"under {MAX_PROFILE_WORDS} words, general rules only.",
+        ]
     return "\n".join(lines)
 
 

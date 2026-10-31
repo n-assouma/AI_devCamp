@@ -11,9 +11,278 @@
           "selected_at": "2026-10-31T13:04:38.947978+00:00",
           "answer_correct": null,
           "prediction": null
+        },
+        {
+          "id": "824785de-69ef-4366-b0fb-f1e503b9e2cf",
+          "style": "steps",
+          "selected_at": "2026-10-31T15:09:35.032317+00:00",
+          "source": "student_choice",
+          "conversation_id": "510a3762-6a61-40ff-b1bd-9664de63a012",
+          "prompt": "2+2",
+          "answer_correct": true
+        },
+        {
+          "id": "e0332566-87dc-415b-bafe-2a8dce057654",
+          "style": "example",
+          "selected_at": "2026-10-31T15:11:19.836358+00:00",
+          "source": "student_choice",
+          "conversation_id": "b2bee634-ff45-4dea-8aa3-1102c063b05b",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "answer_correct": false
+        },
+        {
+          "id": "2e116b6d-c3cd-4e79-9b29-e606e5de745b",
+          "style": "analogy",
+          "selected_at": "2026-10-31T15:14:39.825652+00:00",
+          "source": "student_choice",
+          "conversation_id": "8b0ec625-7a23-4cb7-a45e-3c0be4a099c9",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "answer_correct": true
         }
       ],
-      "rounds": []
+      "rounds": [
+        {
+          "conversation_id": "510a3762-6a61-40ff-b1bd-9664de63a012",
+          "prompt": "2+2",
+          "check_question": "What is 3 + 2?",
+          "student_response": "5",
+          "answered_at": "2026-10-31T15:10:17.711358+00:00",
+          "correct": true
+        },
+        {
+          "conversation_id": "b2bee634-ff45-4dea-8aa3-1102c063b05b",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "check_question": "Can you solve for $x$ in the expression $2x - 4 = 10$ using these steps?",
+          "student_response": "no",
+          "answered_at": "2026-10-31T15:11:44.997383+00:00",
+          "correct": false
+        },
+        {
+          "conversation_id": "d03c0117-9c2e-4877-8c73-0633fc9e573a",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "check_question": "Simplify the expression 2(x + 3) + 5 when x = 4.",
+          "student_response": "19",
+          "answered_at": "2026-10-31T15:14:15.359539+00:00",
+          "correct": true
+        },
+        {
+          "conversation_id": "8b0ec625-7a23-4cb7-a45e-3c0be4a099c9",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "check_question": "Can you solve for x in the expression 3x - 5 = 10?",
+          "student_response": "5",
+          "answered_at": "2026-10-31T15:14:46.676946+00:00",
+          "correct": true
+        }
+      ],
+      "conversations": [
+        {
+          "id": "510a3762-6a61-40ff-b1bd-9664de63a012",
+          "prompt": "2+2",
+          "created_at": "2026-10-31T15:08:51.489516+00:00",
+          "response": {
+            "answers": {
+              "steps": "1. Start with the first number, which is 2.\n2. Count forward by 2 more: 3, 4.\n3. You reach 4, which is the total sum.",
+              "analogy": "Imagine you have 2 apples in your left hand and 2 apples in your right hand. When you put them together into one bowl, you can count 4 apples in total.",
+              "example": "If you have 2 blocks (■ ■) and add 2 more blocks (■ ■), you can count them all together: ■ ■ ■ ■ (1, 2, 3, 4). So, 2 + 2 = 4."
+            },
+            "is_definition": false,
+            "check_question": "What is 3 + 2?"
+          },
+          "preferred_style": null,
+          "selected_style": "steps",
+          "forced_style": null,
+          "check_answer": null,
+          "profile_before": "No profile yet - this is the agent's first look at this student.",
+          "prediction": {
+            "pick": "steps",
+            "correct_after_pick": true,
+            "reason": "Profile is empty, so using default base rates for a simple addition question.",
+            "forced": false
+          },
+          "prediction_error": null,
+          "score": {
+            "round": 1,
+            "student": "judge",
+            "forced_style": null,
+            "pred_pick": "steps",
+            "pred_correct": true,
+            "actual_pick": "steps",
+            "actual_correct": true,
+            "pick_hit": true,
+            "correct_hit": true
+          },
+          "check_response": {
+            "text": "5",
+            "answered_at": "2026-10-31T15:10:17.711358+00:00",
+            "correct": true,
+            "graded_by": "student"
+          }
+        },
+        {
+          "id": "b2bee634-ff45-4dea-8aa3-1102c063b05b",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "created_at": "2026-10-31T15:10:45.727117+00:00",
+          "response": {
+            "answers": {
+              "steps": "Algebraic manipulation means rearranging or simplifying an expression with a variable (like $x$) to find its value or make it simpler. To do this correctly, we use PEMDAS (Parentheses, Exponents, Multiplication/Division, Addition/Subtraction) in reverse, called undoing operations. When you want to isolate the variable, you apply the opposite operation to both sides of the equation step-by-step until the variable is all by itself.",
+              "analogy": "Think of an algebraic expression like a wrapped present locked inside a series of boxes. To get to the prize (the variable $x$), you have to undo the locks in the exact reverse order of how they were put on.",
+              "example": "Let's solve $3x + 2 = 11$ for $x$.\n1. First, undo the addition by subtracting 2 from both sides: $3x = 9$.\n2. Next, undo the multiplication by dividing both sides by 3: $x = 3$.\nThe solution is $x = 3$."
+            },
+            "is_definition": false,
+            "check_question": "Can you solve for $x$ in the expression $2x - 4 = 10$ using these steps?"
+          },
+          "preferred_style": null,
+          "selected_style": "example",
+          "forced_style": null,
+          "check_answer": null,
+          "profile_before": "No profile yet - this is the agent's first look at this student.",
+          "prediction": {
+            "pick": "steps",
+            "correct_after_pick": true,
+            "reason": "Profile is empty, so I defaulted to the most common explanation choice with an even chance.",
+            "forced": false
+          },
+          "prediction_error": null,
+          "score": {
+            "round": 2,
+            "student": "judge",
+            "forced_style": null,
+            "pred_pick": "steps",
+            "pred_correct": true,
+            "actual_pick": "example",
+            "actual_correct": false,
+            "pick_hit": false,
+            "correct_hit": false
+          },
+          "check_response": {
+            "text": "no",
+            "answered_at": "2026-10-31T15:11:44.997383+00:00",
+            "correct": false,
+            "graded_by": "student"
+          },
+          "update_error": null,
+          "profile_after": "Prefers: example over steps when encountering algebraic manipulation, though this choice occasionally draws them away from familiar territory.\nLearns from: steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions."
+        },
+        {
+          "id": "d03c0117-9c2e-4877-8c73-0633fc9e573a",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "created_at": "2026-10-31T15:14:01.815100+00:00",
+          "response": {
+            "answers": {
+              "steps": "To simplify or solve an algebraic expression with a single variable using PEMDAS, follow these steps in order:\n1. P - Parentheses: Simplify everything inside parentheses first.\n2. E - Exponents: Evaluate any exponents or powers.\n3. MD - Multiplication and Division: Perform multiplication and division from left to right.\n4. AS - Addition and Subtraction: Perform addition and subtraction from left to right.",
+              "analogy": "Think of algebraic manipulation like untangling a knotted pair of headphones. You have to follow the loops in a specific reverse order to get them straight, just like following PEMDAS helps you carefully undo and simplify expressions step by step.",
+              "example": "Let's simplify the expression 3(x + 2) - 4 when x = 5.\n1. Substitute x: 3(5 + 2) - 4\n2. Parentheses: 3(7) - 4\n3. Multiplication: 21 - 4\n4. Subtraction: 17"
+            },
+            "is_definition": false,
+            "check_question": "Simplify the expression 2(x + 3) + 5 when x = 4."
+          },
+          "preferred_style": null,
+          "selected_style": "analogy",
+          "forced_style": "analogy",
+          "check_answer": null,
+          "profile_before": "Prefers: example over steps when encountering algebraic manipulation, though this choice occasionally draws them away from familiar territory.\nLearns from: steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions.",
+          "prediction": {
+            "pick": "analogy",
+            "correct_after_pick": false,
+            "reason": "Profile states student only learns from steps while examples leave them unable to answer correctly.",
+            "forced": true
+          },
+          "prediction_error": null,
+          "score": {
+            "round": 3,
+            "student": "judge",
+            "forced_style": "analogy",
+            "pred_pick": "analogy",
+            "pred_correct": false,
+            "actual_pick": "analogy",
+            "actual_correct": true,
+            "pick_hit": null,
+            "correct_hit": false
+          },
+          "check_response": {
+            "text": "19",
+            "answered_at": "2026-10-31T15:14:15.359539+00:00",
+            "correct": true,
+            "graded_by": "student"
+          },
+          "update_error": null,
+          "profile_after": "Prefers example over steps when encountering algebraic manipulation, occasionally deviating toward analogy when presented.\nLearns from analogy and steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions."
+        },
+        {
+          "id": "8b0ec625-7a23-4cb7-a45e-3c0be4a099c9",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "created_at": "2026-10-31T15:14:32.739785+00:00",
+          "response": {
+            "answers": {
+              "steps": "1. Identify the variable you want to isolate. 2. Look at the operations applied to the variable. 3. Apply inverse operations to both sides of the equation. 4. Follow the reverse of PEMDAS (start with addition/subtraction, then multiplication/division) to peel away the numbers step by step.",
+              "analogy": "Think of an algebraic expression like a wrapped gift. To find out what is inside the box (the variable), you have to undo the wrapping paper and ribbons in the exact reverse order of how they were put on.",
+              "example": "To solve for x in the expression 2x + 3 = 11: First, subtract 3 from both sides to get 2x = 8. Then, divide both sides by 2 to find x = 4."
+            },
+            "is_definition": false,
+            "check_question": "Can you solve for x in the expression 3x - 5 = 10?"
+          },
+          "preferred_style": null,
+          "selected_style": "analogy",
+          "forced_style": null,
+          "check_answer": null,
+          "profile_before": "Prefers example over steps when encountering algebraic manipulation, occasionally deviating toward analogy when presented.\nLearns from analogy and steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions.",
+          "prediction": {
+            "pick": "example",
+            "correct_after_pick": false,
+            "reason": "Profile states student prefers examples but examples leave them unable to answer correctly.",
+            "forced": false
+          },
+          "prediction_error": null,
+          "score": {
+            "round": 4,
+            "student": "judge",
+            "forced_style": null,
+            "pred_pick": "example",
+            "pred_correct": false,
+            "actual_pick": "analogy",
+            "actual_correct": true,
+            "pick_hit": false,
+            "correct_hit": false
+          },
+          "check_response": {
+            "text": "5",
+            "answered_at": "2026-10-31T15:14:46.676946+00:00",
+            "correct": true,
+            "graded_by": "student"
+          },
+          "update_error": null,
+          "profile_after": "Prefers example over steps, but frequently deviates toward analogy for algebraic manipulation. Learns from analogy and steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions."
+        },
+        {
+          "id": "91608738-fcf3-4b9d-ba18-a16d313966aa",
+          "prompt": "Help me understand algebraic manipulation for simple expressions with single variable and operations PEMDAS",
+          "created_at": "2026-10-31T15:14:58.721088+00:00",
+          "response": {
+            "answers": {
+              "steps": "To solve a single-variable expression using PEMDAS in reverse, follow these steps: 1) Identify where the variable is located. 2) Undo any addition or subtraction first by applying the opposite operation to both sides. 3) Undo any multiplication or division next. 4) Finally, check your answer by plugging it back into the original expression.",
+              "analogy": "Think of an algebraic expression like a delicate, balanced mobile hanging from the ceiling, with the variable as a mystery weight. To figure out what the mystery weight is without tipping the mobile over, whatever operation you do to one side, you must do to the exact opposite side in reverse order of PEMDAS.",
+              "example": "Solve for x in the expression: 3x + 4 = 19. First, subtract 4 from both sides to get 3x = 15. Next, divide both sides by 3 to isolate x, which gives x = 5."
+            },
+            "is_definition": false,
+            "check_question": "Can you solve for x in the expression 2x - 5 = 9 using the steps we discussed?"
+          },
+          "preferred_style": null,
+          "selected_style": null,
+          "forced_style": null,
+          "check_answer": null,
+          "profile_before": "Prefers example over steps, but frequently deviates toward analogy for algebraic manipulation. Learns from analogy and steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions.",
+          "prediction": {
+            "pick": "example",
+            "correct_after_pick": false,
+            "reason": "Profile states that example leaves them unable to answer correctly despite their initial preference.",
+            "forced": false
+          },
+          "prediction_error": null,
+          "score": null,
+          "check_response": null
+        }
+      ],
+      "notes": "Prefers example over steps, but frequently deviates toward analogy for algebraic manipulation. Learns from analogy and steps, while example leaves them unable to answer correctly.\nWatch: algebraic manipulation of single-variable expressions."
     }
   }
 }

@@ -9,7 +9,14 @@ import pandas as pd
 import streamlit as st
 
 from preference_store import load_preference_store, save_preference_store
-from tutor_agent import answers_match, choose_intervention, predict, update
+from tutor_agent import (
+    answers_match,
+    choose_intervention,
+    choose_presentation,
+    predict,
+    recommend_style,
+    update,
+)
 from tutor_provider import (
     STYLES,
     DemoTutor,
@@ -41,6 +48,17 @@ OUTCOME_BASELINE = 1 / 2
 RANDOM_BASELINE = (PICK_BASELINE + OUTCOME_BASELINE) / 2
 #: How often the tutor overrides the student's choice to run an experiment.
 INTERVENTION_EVERY = 3
+#: Observations of a style before the tutor will LEAD with it.
+#:
+#: This is a real trade-off, measured rather than guessed. At 2, a
+#: recommendation forms within a handful of rounds -- good for a short live
+#: demo -- but two observations cannot separate a style that helps 75% of the
+#: time from one that helps 35%, and the tutor locks onto the wrong style and
+#: then only ever gathers evidence about that one. On the simulated cohort
+#: that made two of eight students WORSE off than no leading at all. At 4 the
+#: recommendation was right for 7 of 8, at the cost of taking roughly a dozen
+#: rounds to appear. Lower it for a short demo knowing what it buys.
+MIN_EVIDENCE_TO_LEAD = 4
 NO_PROFILE_YET = "No profile yet - this is the agent's first look at this student."
 
 
@@ -370,9 +388,18 @@ def append_prompt(
     # forces the style it has the least evidence about. A student with a strong
     # preference never generates evidence about the other two, and "what you
     # prefer is not what teaches you" cannot be found in choices alone.
-    forced_style = choose_intervention(
-        round_logs(student), every=INTERVENTION_EVERY
+    # ...and once there is enough evidence it stops asking and LEADS with the
+    # style that actually helps this student. That is the payoff: a tutor that
+    # learns you and then never changes what it does has not helped you.
+    # "lead" still shows the other explanations, so the pick stays a real
+    # choice and stays predictable; "probe" does not.
+    mode, mode_style = choose_presentation(
+        round_logs(student),
+        probe_every=INTERVENTION_EVERY,
+        min_evidence=MIN_EVIDENCE_TO_LEAD,
     )
+    forced_style = mode_style if mode == "probe" else None
+    led_style = mode_style if mode == "lead" else None
     try:
         # Always all three explanations: the student has to have a real choice
         # for the predicted pick to mean anything, so a saved preference no
@@ -413,6 +440,8 @@ def append_prompt(
         # is nothing for the student to choose.
         "selected_style": forced_style,
         "forced_style": forced_style,
+        "led_style": led_style,
+        "mode": mode,
         "check_answer": check_answer,
         "profile_before": notes,
         "prediction": prediction,
@@ -618,21 +647,52 @@ def render_turn(turn: dict[str, Any], student_id: str) -> None:
                 st.warning(f"The tutor response did not include a {style} explanation.")
                 return
         else:
-            st.markdown(
-                "Three ways of seeing this. Which version works best for you?"
-            )
-            cols = st.columns(3)
-            for col, option_style in zip(cols, STYLES):
-                with col:
-                    with st.container(border=True):
-                        st.markdown(f"**{STYLE_LABELS[option_style]}**")
-                        st.markdown(response["answers"][option_style])
-                        if st.button(
-                            "Use this style",
-                            key=f"style_{turn['id']}_{option_style}",
-                            width="stretch",
-                        ):
-                            select_style(turn, option_style, student_id)
+            led = turn.get("led_style")
+            # Once the agent has worked out what actually helps this student,
+            # it stops presenting three equal options and opens with that one.
+            # A tutor that learns you and then behaves identically forever has
+            # not helped you -- this is where the profile finally does
+            # something. The other two stay one click away, so the choice is
+            # still real and the predicted pick still means something.
+            others = [s for s in STYLES if s != led] if led else list(STYLES)
+
+            if led:
+                st.markdown(
+                    f"Your profile says **{STYLE_LABELS[led].lower()}** is what "
+                    "actually helps you answer correctly - even if it is not "
+                    "what you would have picked. Starting there:"
+                )
+                with st.container(border=True):
+                    st.markdown(f"**{STYLE_LABELS[led]}**")
+                    st.markdown(response["answers"][led])
+                    if st.button(
+                        "Use this style",
+                        key=f"style_{turn['id']}_{led}",
+                        type="primary",
+                        width="stretch",
+                    ):
+                        select_style(turn, led, student_id)
+                expander = st.expander("Show me the other two ways")
+            else:
+                st.markdown(
+                    "Three ways of seeing this. Which version works best for you?"
+                )
+                expander = None
+
+            container = expander if expander is not None else st.container()
+            with container:
+                cols = st.columns(len(others))
+                for col, option_style in zip(cols, others):
+                    with col:
+                        with st.container(border=True):
+                            st.markdown(f"**{STYLE_LABELS[option_style]}**")
+                            st.markdown(response["answers"][option_style])
+                            if st.button(
+                                "Use this style",
+                                key=f"style_{turn['id']}_{option_style}",
+                                width="stretch",
+                            ):
+                                select_style(turn, option_style, student_id)
             render_prediction(turn)
             return
 

@@ -19,6 +19,8 @@ import re
 import time
 from pathlib import Path
 
+from tutor_agent import choose_presentation
+
 STYLES = ["steps", "analogy", "example"]
 NOISE = 0.15          # 15% of the time a student picks one of the other styles
 WINDOW = 5            # rolling window for the know-you score
@@ -33,6 +35,13 @@ QUESTIONS_FILE = Path("questions.json")
 # ---------------------------------------------------------------------------
 # Simulated students (the agent never sees these rules)
 # ---------------------------------------------------------------------------
+
+#: How often a student actually reads the explanation the tutor leads with.
+#: A lead is a steer, not a force -- the other explanations stay on screen --
+#: so this is deliberately not 1.0. If it were, "lead" would just be "probe"
+#: with a nicer name and the pick would stop being a real choice.
+P_TAKES_LEAD = 0.75
+
 
 class SimStudent:
     def __init__(self, name, favourite, learns_from, p_correct_if_helped, p_correct_otherwise, seed):
@@ -51,6 +60,12 @@ class SimStudent:
         if self.rng.random() < NOISE:
             return self.rng.choice([s for s in STYLES if s != self.favourite])
         return self.favourite
+
+    def respond_to_lead(self, led_style):
+        """What they actually read when the tutor opens with ``led_style``."""
+        if self.rng.random() < P_TAKES_LEAD:
+            return led_style
+        return self.pick()
 
     def answer_check(self, pick):
         p = self.p_help if pick == self.learns_from else self.p_other
@@ -276,10 +291,11 @@ def to_notes(obj):
 # The loop
 # ---------------------------------------------------------------------------
 
-def run(student_names, rounds, seed, use_mock, sleep, intervene_every=3):
+def run(student_names, rounds, seed, use_mock, sleep, intervene_every=3, exploit=True):
     """Run to completion, printing as it goes. The CLI entry point."""
     log = []
-    for row in stream(student_names, rounds, seed, use_mock, sleep, intervene_every):
+    for row in stream(student_names, rounds, seed, use_mock, sleep, intervene_every,
+                      exploit=exploit):
         log = row["_log"]
         print(f"r{row['round']:2d} predicted {row['pred_pick']:7s}/"
               f"{'right' if row['pred_correct'] else 'wrong':5s} "
@@ -293,7 +309,7 @@ def run(student_names, rounds, seed, use_mock, sleep, intervene_every=3):
 
 
 def stream(student_names, rounds, seed, use_mock, sleep, intervene_every=3,
-           results_file=None):
+           results_file=None, exploit=True):
     """Yield one scored round at a time, as it happens.
 
     A generator rather than a function that returns at the end, so a UI can
@@ -318,10 +334,21 @@ def stream(student_names, rounds, seed, use_mock, sleep, intervene_every=3,
         for r in range(1, rounds + 1):
             question = questions[(r - 1) % len(questions)]
 
-            # 0. Does the tutor want to run an experiment this round?
-            forced = choose_intervention(
-                [row for row in log if row["student"] == name], intervene_every
-            )
+            # 0. How should this round be presented? Three outcomes:
+            #    probe  - force the least-evidenced style (buy information)
+            #    lead   - open with the style the evidence says HELPS them,
+            #             the other explanations still available (the payoff)
+            #    choose - show everything, no steer
+            own = [row for row in log if row["student"] == name]
+            if exploit:
+                mode, style = choose_presentation(
+                    own, probe_every=intervene_every
+                )
+            else:
+                mode = "probe" if choose_intervention(own, intervene_every) else "choose"
+                style = choose_intervention(own, intervene_every)
+            forced = style if mode == "probe" else None
+            led = style if mode == "lead" else None
 
             # 1. Sealed prediction, made before the student does anything.
             pred = to_dict(with_retry(call_predict, agent, profile["notes"],
@@ -334,7 +361,12 @@ def stream(student_names, rounds, seed, use_mock, sleep, intervene_every=3,
             #    style -- and correctness must follow what they read, not what
             #    they would have picked. Get this backwards and the experiment
             #    measures nothing.
-            actual_pick = forced or student.pick()
+            if forced:
+                actual_pick = forced          # no choice offered
+            elif led:
+                actual_pick = student.respond_to_lead(led)   # steered, not forced
+            else:
+                actual_pick = student.pick()
             actual_correct = student.answer_check(actual_pick)
 
             # 3. Compare. On a forced round the pick was never predicted, so
@@ -367,6 +399,8 @@ def stream(student_names, rounds, seed, use_mock, sleep, intervene_every=3,
             row = {
                 "round": r, "student": name,
                 "forced_style": forced,
+                "led_style": led,
+                "mode": mode,
                 "pred_pick": pred_pick, "pred_correct": pred_correct,
                 "actual_pick": actual_pick, "actual_correct": actual_correct,
                 "pick_hit": pick_hit, "correct_hit": correct_hit,
@@ -496,6 +530,10 @@ def main():
     p.add_argument("--students", nargs="+", default=HEADLINE_STUDENTS,
                    choices=sorted(make_students(0)) + ["all"],
                    help="which simulated students to run, or 'all' for the whole cohort")
+    p.add_argument("--no-exploit", action="store_true",
+                   help="never lead with the helpful style; only ever show all "
+                        "three. This is the BEFORE case: the agent learns the "
+                        "student and then does nothing with it.")
     p.add_argument("--intervene-every", type=int, default=3, metavar="N",
                    help="force the least-evidenced style every N rounds (0 disables). "
                         "Without this the agent may never observe what actually "
@@ -511,7 +549,7 @@ def main():
         names = (sorted(make_students(0)) if "all" in args.students
                  else list(dict.fromkeys(args.students)))
         log = run(names, args.rounds, args.seed, args.mock, args.sleep,
-                  args.intervene_every)
+                  args.intervene_every, exploit=not args.no_exploit)
 
     summarise(log)
     plot(log)

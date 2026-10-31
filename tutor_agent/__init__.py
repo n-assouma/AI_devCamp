@@ -42,6 +42,9 @@ from .api import (
     predict,
     run_round,
     choose_intervention,
+    choose_presentation,
+    recommend_style,
+    style_evidence,
     update,
 )
 from .config import (
@@ -66,6 +69,9 @@ __all__ = [
     "update",
     "run_round",
     "choose_intervention",
+    "choose_presentation",
+    "recommend_style",
+    "style_evidence",
     "normalise_answer",
     # --- helpers ----------------------------------------------------------
     "answers_match",

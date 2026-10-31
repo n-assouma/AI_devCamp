@@ -36,6 +36,9 @@ __all__ = [
     "update",
     "run_round",
     "choose_intervention",
+    "choose_presentation",
+    "recommend_style",
+    "style_evidence",
     "normalise_answer",
     "answers_match",
     "clamp_words",
@@ -177,6 +180,136 @@ def choose_intervention(
     # Fewest observations first; STYLES order breaks ties so the choice is
     # deterministic and a rerun of the simulation reproduces exactly.
     return min(styles, key=lambda s: (seen.get(s, 0), styles.index(s)))
+
+
+def style_evidence(
+    history: Sequence[Mapping[str, Any]], styles: Sequence[str] | None = None
+) -> dict[str, dict[str, int | float]]:
+    """Per style: how often it was READ, and how often it then worked.
+
+    Counts what the student actually read, which on a led or forced round is
+    the tutor's choice rather than their preference. That is the whole point:
+    ``helps`` is the only column that says anything about learning, and it can
+    only be filled for styles the student was actually shown.
+    """
+    styles = list(STYLES if styles is None else styles)
+    out = {s: {"shown": 0, "right": 0, "helps": 0.0} for s in styles}
+    for row in history:
+        style = row.get("actual_pick")
+        if style in out:
+            out[style]["shown"] += 1
+            out[style]["right"] += bool(row.get("actual_correct"))
+    for cell in out.values():
+        if cell["shown"]:
+            cell["helps"] = cell["right"] / cell["shown"]
+    return out
+
+
+def recommend_style(
+    history: Sequence[Mapping[str, Any]],
+    *,
+    styles: Sequence[str] | None = None,
+    min_evidence: int = 4,
+    margin: float = 0.15,
+) -> str | None:
+    """The style this student actually LEARNS from, or None if not yet known.
+
+    Deliberately not "the style they pick". A recommendation built from
+    preference would just hand Maya the steps she already chooses and change
+    nothing; the profile exists to find the gap between those two.
+
+    Returns None unless one style has at least ``min_evidence`` observations
+    and beats the next best by ``margin``. Leading a student toward a style on
+    one lucky round is worse than not leading them at all.
+    """
+    styles = list(STYLES if styles is None else styles)
+    ev = style_evidence(history, styles)
+    ranked = sorted(
+        (s for s in styles if ev[s]["shown"] >= min_evidence),
+        key=lambda s: (-ev[s]["helps"], styles.index(s)),
+    )
+    # At least two styles must have been observed. With only one, it "wins"
+    # by default and the tutor would confidently lead Maya toward the steps
+    # that are the only thing she has ever been shown -- recommending the
+    # student's own habit back to them, which is exactly the failure this
+    # whole project is about. A comparison needs something to compare to.
+    if len(ranked) < 2:
+        return None
+    best = ranked[0]
+    rest = [ev[s]["helps"] for s in ranked[1:]]
+    if ev[best]["helps"] - max(rest) < margin:
+        return None  # nothing clearly better; keep offering the choice
+    return best
+
+
+def choose_presentation(
+    history: Sequence[Mapping[str, Any]],
+    *,
+    styles: Sequence[str] | None = None,
+    probe_every: int = 3,
+    min_evidence: int = 4,
+    explore_every: int = 3,
+) -> tuple[str, str | None]:
+    """How to present this round: ``("choose"|"probe"|"lead", style)``.
+
+    The three-way split exists because the two obvious designs are both wrong.
+    Always showing one explanation leaves nothing to predict, so the agent
+    stops learning after round one. Always showing three means the agent
+    learns the student and then never does anything with it -- it understands
+    Maya perfectly and still lets her pick the thing that does not work.
+
+    So:
+
+    ``probe``   force the least-evidenced style. Buys information at the
+                student's expense, which is why it is rationed.
+    ``lead``    open with the style the evidence says HELPS them, once there
+                is enough evidence to justify it. This is the payoff: the
+                tutor visibly changes its behaviour because of what it
+                learned. The other explanations stay available, so the
+                student still chooses and ``pick`` stays predictable.
+    ``choose``  show all of them, no steer.
+
+    One round in ``explore_every`` always falls back to ``choose`` even when a
+    recommendation exists, so the preference signal never dries up entirely
+    and the know-you score keeps both halves alive.
+    """
+    styles = list(STYLES if styles is None else styles)
+    n = len(history) + 1
+    ev = style_evidence(history, styles)
+
+    # 1. Keep probing the least-seen style -- ALWAYS, not only while evidence
+    #    is thin. This is the guard against the trap that leading creates:
+    #    once the tutor starts leading with X, X collects every subsequent
+    #    observation and the alternatives are never tested again, so a wrong
+    #    recommendation becomes self-confirming and permanent. Measured on
+    #    this cohort, stopping probes once each style had two observations
+    #    locked iris and omar onto the wrong style for the rest of the run
+    #    and made their outcomes worse than no leading at all.
+    #
+    #    One round in probe_every is the standing cost of keeping a
+    #    recommendation falsifiable.
+    if probe_every > 0 and n % probe_every == 0:
+        return "probe", min(
+            styles, key=lambda s: (ev[s]["shown"], styles.index(s))
+        )
+
+    best = recommend_style(history, styles=styles, min_evidence=min_evidence)
+    if best is None:
+        return "choose", None  # nothing worth leading with yet
+
+    # 2. Keep checking the preference, but less and less often. A FIXED
+    #    explore rate was the bug: at one round in three it never stops
+    #    costing the student, and Maya spent 25 of 40 rounds reading the
+    #    steps that do not work for her even though the tutor had already
+    #    worked out that examples do. Exploration is an investment, and an
+    #    investment you keep making at full size forever is just a tax.
+    #    The period grows with evidence, so leading becomes the normal case
+    #    while the pick signal never disappears entirely.
+    seen = sum(int(cell["shown"]) for cell in ev.values())
+    explore_period = max(explore_every, 3 + seen // 6)
+    if n % explore_period == 1:
+        return "choose", None
+    return "lead", best
 
 
 def predict(

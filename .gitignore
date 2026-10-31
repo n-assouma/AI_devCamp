@@ -19,3 +19,6 @@ venv/
 
 # docs
 *.pdf
+
+# scratch output from the Live simulation view
+results_live.json

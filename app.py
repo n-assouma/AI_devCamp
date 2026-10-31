@@ -9,7 +9,14 @@ import pandas as pd
 import streamlit as st
 
 from preference_store import load_preference_store, save_preference_store
-from tutor_agent import answers_match, choose_intervention, predict, update
+from tutor_agent import (
+    answers_match,
+    choose_intervention,
+    choose_presentation,
+    predict,
+    recommend_style,
+    update,
+)
 from tutor_provider import (
     STYLES,
     DemoTutor,
@@ -41,6 +48,17 @@ OUTCOME_BASELINE = 1 / 2
 RANDOM_BASELINE = (PICK_BASELINE + OUTCOME_BASELINE) / 2
 #: How often the tutor overrides the student's choice to run an experiment.
 INTERVENTION_EVERY = 3
+#: Observations of a style before the tutor will LEAD with it.
+#:
+#: This is a real trade-off, measured rather than guessed. At 2, a
+#: recommendation forms within a handful of rounds -- good for a short live
+#: demo -- but two observations cannot separate a style that helps 75% of the
+#: time from one that helps 35%, and the tutor locks onto the wrong style and
+#: then only ever gathers evidence about that one. On the simulated cohort
+#: that made two of eight students WORSE off than no leading at all. At 4 the
+#: recommendation was right for 7 of 8, at the cost of taking roughly a dozen
+#: rounds to appear. Lower it for a short demo knowing what it buys.
+MIN_EVIDENCE_TO_LEAD = 4
 NO_PROFILE_YET = "No profile yet - this is the agent's first look at this student."
 
 
@@ -370,9 +388,18 @@ def append_prompt(
     # forces the style it has the least evidence about. A student with a strong
     # preference never generates evidence about the other two, and "what you
     # prefer is not what teaches you" cannot be found in choices alone.
-    forced_style = choose_intervention(
-        round_logs(student), every=INTERVENTION_EVERY
+    # ...and once there is enough evidence it stops asking and LEADS with the
+    # style that actually helps this student. That is the payoff: a tutor that
+    # learns you and then never changes what it does has not helped you.
+    # "lead" still shows the other explanations, so the pick stays a real
+    # choice and stays predictable; "probe" does not.
+    mode, mode_style = choose_presentation(
+        round_logs(student),
+        probe_every=INTERVENTION_EVERY,
+        min_evidence=MIN_EVIDENCE_TO_LEAD,
     )
+    forced_style = mode_style if mode == "probe" else None
+    led_style = mode_style if mode == "lead" else None
     try:
         # Always all three explanations: the student has to have a real choice
         # for the predicted pick to mean anything, so a saved preference no
@@ -413,6 +440,8 @@ def append_prompt(
         # is nothing for the student to choose.
         "selected_style": forced_style,
         "forced_style": forced_style,
+        "led_style": led_style,
+        "mode": mode,
         "check_answer": check_answer,
         "profile_before": notes,
         "prediction": prediction,
@@ -618,21 +647,52 @@ def render_turn(turn: dict[str, Any], student_id: str) -> None:
                 st.warning(f"The tutor response did not include a {style} explanation.")
                 return
         else:
-            st.markdown(
-                "Three ways of seeing this. Which version works best for you?"
-            )
-            cols = st.columns(3)
-            for col, option_style in zip(cols, STYLES):
-                with col:
-                    with st.container(border=True):
-                        st.markdown(f"**{STYLE_LABELS[option_style]}**")
-                        st.markdown(response["answers"][option_style])
-                        if st.button(
-                            "Use this style",
-                            key=f"style_{turn['id']}_{option_style}",
-                            width="stretch",
-                        ):
-                            select_style(turn, option_style, student_id)
+            led = turn.get("led_style")
+            # Once the agent has worked out what actually helps this student,
+            # it stops presenting three equal options and opens with that one.
+            # A tutor that learns you and then behaves identically forever has
+            # not helped you -- this is where the profile finally does
+            # something. The other two stay one click away, so the choice is
+            # still real and the predicted pick still means something.
+            others = [s for s in STYLES if s != led] if led else list(STYLES)
+
+            if led:
+                st.markdown(
+                    f"Your profile says **{STYLE_LABELS[led].lower()}** is what "
+                    "actually helps you answer correctly - even if it is not "
+                    "what you would have picked. Starting there:"
+                )
+                with st.container(border=True):
+                    st.markdown(f"**{STYLE_LABELS[led]}**")
+                    st.markdown(response["answers"][led])
+                    if st.button(
+                        "Use this style",
+                        key=f"style_{turn['id']}_{led}",
+                        type="primary",
+                        width="stretch",
+                    ):
+                        select_style(turn, led, student_id)
+                expander = st.expander("Show me the other two ways")
+            else:
+                st.markdown(
+                    "Three ways of seeing this. Which version works best for you?"
+                )
+                expander = None
+
+            container = expander if expander is not None else st.container()
+            with container:
+                cols = st.columns(len(others))
+                for col, option_style in zip(cols, others):
+                    with col:
+                        with st.container(border=True):
+                            st.markdown(f"**{STYLE_LABELS[option_style]}**")
+                            st.markdown(response["answers"][option_style])
+                            if st.button(
+                                "Use this style",
+                                key=f"style_{turn['id']}_{option_style}",
+                                width="stretch",
+                            ):
+                                select_style(turn, option_style, student_id)
             render_prediction(turn)
             return
 
@@ -815,6 +875,113 @@ def render_replay(all_results: list[dict[str, Any]]) -> None:
     show_score_chart(records)
 
 
+def render_live_sim() -> None:
+    """Watch the agent learn a cohort of simulated students, round by round.
+
+    The replay view shows a finished run; this one shows the learning happening.
+    sim.stream() is a generator, so every round is drawn as it is scored rather
+    than after the whole run completes.
+
+    Speed is the honest constraint here. The mock agent is pure Python: a
+    couple of hundred rounds land in seconds and cost nothing. The real agent
+    is one to three Gemini calls per round at two to four seconds each, so the
+    same run takes roughly twenty minutes and several hundred calls. Both are
+    offered; the sidebar says which one is running, because a chart drawn by
+    the mock agent proves the mechanism works, not that Gemini learns.
+    """
+    import sim
+
+    st.sidebar.markdown("---")
+    use_mock = st.sidebar.radio(
+        "Agent",
+        ("Mock (instant, free)", "Gemini (real, slow)"),
+        help="The mock agent is a plain Python tally. It proves the loop and "
+             "the chart work. Only the Gemini run is evidence the agent learns.",
+    ).startswith("Mock")
+    names = st.sidebar.multiselect(
+        "Students", sorted(sim.make_students(0)), default=sim.HEADLINE_STUDENTS
+    )
+    rounds = st.sidebar.slider("Rounds each", 5, 60, 30 if use_mock else 10)
+    delay = st.sidebar.slider("Seconds per round", 0.0, 2.0, 0.15 if use_mock else 0.0, 0.05,
+                              help="Slow it down so an audience can follow.")
+    every = st.sidebar.slider("Force a style every N rounds", 0, 6, 3,
+                              help="0 turns interventions off. Watch Maya's "
+                                   "line with it on and off.")
+
+    if not names:
+        st.info("Pick at least one student in the sidebar.")
+        return
+    if not use_mock:
+        st.warning(
+            f"A real run is about {len(names) * rounds} rounds and "
+            f"{len(names) * rounds * 2} Gemini calls. The free tier allows 20 "
+            "per model per day."
+        )
+    if not st.button("Run the simulation", type="primary"):
+        st.caption("The agent starts knowing nothing. Watch the line climb.")
+        return
+
+    # Order matters: the counters and the chart are what an audience watches,
+    # so they go above the feed. Creating the columns after feed_box would
+    # push them below it and off the bottom of the screen.
+    boxes = [c.empty() for c in st.columns(4)]
+    chart_box = st.empty()
+    st.caption("Each line is one student. Flat line is random guessing.")
+    feed_box = st.empty()
+    feed: list[str] = []
+
+    try:
+        for row in sim.stream(names, rounds, 42, use_mock, delay, every,
+                              results_file=ROOT / "results_live.json"):
+            log = row["_log"]
+            frame = {}
+            for n in names:
+                rows = [x for x in log if x["student"] == n]
+                if rows:
+                    frame[n.capitalize()] = sim.know_you_scores(rows)
+            width = max((len(v) for v in frame.values()), default=0)
+            frame = {k: v + [None] * (width - len(v)) for k, v in frame.items()}
+            frame["Random baseline"] = [sim.RANDOM_BASELINE] * width
+            chart_box.line_chart(frame, height=320)
+
+            # scored_halves yields (hit, luck_rate) pairs, not bare booleans:
+            # the baseline is per-half, because an intervention round scores
+            # only the 1-in-2 outcome half and not the 1-in-3 pick half.
+            halves = [h for x in log for h in scored_halves(x)]
+            boxes[0].metric("Rounds", len(log))
+            boxes[1].metric(
+                "Know-you score",
+                f"{sum(hit for hit, _ in halves) / len(halves):.0%}" if halves else "-",
+            )
+            boxes[2].metric(
+                "Random baseline",
+                f"{sum(luck for _, luck in halves) / len(halves):.0%}" if halves else "-",
+            )
+            boxes[3].metric("Interventions",
+                            sum(1 for x in log if x["forced_style"]))
+
+            mark = "--" if row["pick_hit"] is None else ("HIT" if row["pick_hit"] else "miss")
+            feed.insert(0, (
+                f"`r{row['round']:>2}` **{row['student']}** "
+                f"{'· forced ' + row['forced_style'] + ' ' if row['forced_style'] else ''}"
+                f"predicted *{row['pred_pick']}* → read *{row['actual_pick']}*, "
+                f"{'got it right' if row['actual_correct'] else 'got it wrong'} "
+                f"· pick {mark} · outcome {'HIT' if row['correct_hit'] else 'miss'}"
+            ))
+            feed_box.markdown("\n\n".join(feed[:12]))
+    except Exception as error:  # noqa: BLE001 - a dead quota must not crash the demo
+        st.error(f"The run stopped: {error}")
+        st.caption("Switch the sidebar Agent to Mock to keep going offline.")
+        return
+
+    st.success(f"Done. {len(names) * rounds} rounds. Saved to results_live.json")
+    st.caption(
+        "Mock agent: this shows the loop and the chart work, not that Gemini learns."
+        if use_mock else
+        "Real Gemini agent: this is the result that counts."
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="The tutor that learns the student",
@@ -823,9 +990,14 @@ def main() -> None:
     )
     st.title("The tutor that learns the student")
     st.caption("Ask a question. Get an explanation that fits how you like to learn.")
-    mode = st.sidebar.radio("App view", ("Tutor chat", "Replay simulation"))
+    mode = st.sidebar.radio(
+        "App view", ("Tutor chat", "Live simulation", "Replay simulation")
+    )
     if mode == "Replay simulation":
         render_replay(load_results())
+        return
+    if mode == "Live simulation":
+        render_live_sim()
         return
 
     student_id = st.sidebar.text_input("Student name", value="judge").strip()

@@ -1,4 +1,11 @@
-pandas>=2.0
-streamlit>=1.30
+# the agent
+google-adk>=2.13
 google-genai>=1.0
 python-dotenv>=1.0
+
+# the UI
+streamlit>=1.30
+pandas>=2.0
+
+# the chart
+matplotlib>=3.8

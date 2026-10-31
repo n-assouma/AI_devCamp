@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "students": {
+    "judge": {
+      "preferences": [
+        {
+          "id": "fd12516c-9322-42dd-a6eb-480d43ef9d3c",
+          "round": 1,
+          "question_id": 1,
+          "style": "example",
+          "selected_at": "2026-10-31T13:04:38.947978+00:00",
+          "answer_correct": null,
+          "prediction": null
+        }
+      ],
+      "rounds": []
+    }
+  }
+}

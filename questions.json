@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "question": "Solve 2x + 5 = 13",
+    "answer": "4",
+    "check": {"question": "Solve 3x + 2 = 14", "answer": "4"},
+    "explanations": {
+      "steps": "1. The 5 is being added, so subtract 5 from both sides: 2x = 8. 2. The x is multiplied by 2, so divide both sides by 2: x = 4. 3. Check by substituting: 2(4) + 5 = 13. Correct. Rule: undo the adding before you undo the multiplying.",
+      "analogy": "Picture a balance. Left pan: two identical bags plus a 5 g weight. Right pan: 13 g. Lift the 5 g weight off the left, and take 5 g off the right too, or it tips. Now two bags balance 8 g, so one bag is 4 g. The equals sign is the pivot.",
+      "example": "Worked example: 4x + 3 = 19. Take 3 off both sides: 4x = 16. Divide both sides by 4: x = 4. Check: 4(4) + 3 = 19. Now you try 2x + 5 = 13. Take the 5 off first, then halve what is left."
+    }
+  },
+  {
+    "id": 2,
+    "question": "Solve 5x - 7 = 18",
+    "answer": "5",
+    "check": {"question": "Solve 4x - 9 = 15", "answer": "6"},
+    "explanations": {
+      "steps": "1. Seven is being subtracted, so add 7 to both sides: 5x = 25. 2. Divide both sides by 5: x = 5. 3. Check: 5(5) - 7 = 18. Correct. Rule: undo the subtraction first, then the multiplication, which is the reverse of the order they were done to x.",
+      "analogy": "Think of a bank account. Five equal wages went in, then a 7 pound fee came out, leaving 18 pounds. Rewind the story newest event first: refund the fee and 25 pounds was sitting there. That 25 pounds was five wages, so one wage is 5 pounds.",
+      "example": "Worked example: 3x - 4 = 11. Add 4 to both sides: 3x = 15. Divide both sides by 3: x = 5. Check: 3(5) - 4 = 11. Now you try 5x - 7 = 18. Add the 7 back first, then divide by 5."
+    }
+  },
+  {
+    "id": 3,
+    "question": "Solve 3x + 20 = 2",
+    "answer": "-6",
+    "check": {"question": "Solve 5x + 27 = 2", "answer": "-5"},
+    "explanations": {
+      "steps": "1. Subtract 20 from both sides: 3x = -18. 2. Divide both sides by 3: x = -6. 3. Check: 3(-6) + 20 = -18 + 20 = 2. Correct. A negative answer does not mean you slipped up. Keep the minus sign attached to the 18 while you divide.",
+      "analogy": "A lift starts underground, rises 20 floors, and stops at floor 2. So it began 18 floors below ground, at floor -18. That drop was three equal falls, so each is 6 floors down. Below ground is a real place, so a negative answer is a real answer.",
+      "example": "Worked example: 2x + 11 = 3. Subtract 11: 2x = -8. Divide by 2: x = -4. Check: 2(-4) + 11 = 3. Now you try 3x + 20 = 2. Subtract 20 first and expect a negative answer, exactly as above."
+    }
+  },
+  {
+    "id": 4,
+    "question": "Solve 7 - 2x = 1",
+    "answer": "3",
+    "check": {"question": "Solve 9 - 4x = 1", "answer": "2"},
+    "explanations": {
+      "steps": "1. The x term is negative, so add 2x to both sides: 7 = 1 + 2x. 2. Subtract 1 from both sides: 6 = 2x. 3. Divide both sides by 2: x = 3. 4. Check: 7 - 2(3) = 1. Correct. Moving the x term across keeps you from dividing by a negative.",
+      "analogy": "You hold 7 pounds. Someone takes two identical cards off you and 1 pound is left. The two cards together are worth the money that vanished, which is 6 pounds, so one card is 3 pounds. Rather than chase the minus sign, ask what was removed.",
+      "example": "Worked example: 10 - 3x = 4. Add 3x to both sides: 10 = 4 + 3x. Subtract 4: 6 = 3x. Divide by 3: x = 2. Check: 10 - 3(2) = 4. Now you try 7 - 2x = 1. Add 2x first so the x term turns positive."
+    }
+  },
+  {
+    "id": 5,
+    "question": "Solve 6x + 3 = 2x + 19",
+    "answer": "4",
+    "check": {"question": "Solve 7x + 1 = 3x + 17", "answer": "4"},
+    "explanations": {
+      "steps": "1. Collect the x terms: subtract 2x from both sides: 4x + 3 = 19. 2. Subtract 3 from both sides: 4x = 16. 3. Divide both sides by 4: x = 4. 4. Check: 6(4) + 3 = 27 and 2(4) + 19 = 27. Move the smaller x term so your coefficient stays positive.",
+      "analogy": "Two online baskets cost the same. One holds six identical t-shirts plus 3 pounds postage, the other two of those t-shirts plus 19 pounds postage. Delete two t-shirts from each basket and the totals still match. Four t-shirts must cover the 16 pound postage gap, so a shirt is 4 pounds.",
+      "example": "Worked example: 5x + 2 = 3x + 10. Subtract 3x: 2x + 2 = 10. Subtract 2: 2x = 8. Divide by 2: x = 4. Check: 5(4) + 2 = 22 and 3(4) + 10 = 22. Now you try 6x + 3 = 2x + 19. Subtract 2x from both sides first."
+    }
+  },
+  {
+    "id": 6,
+    "question": "Solve 4x - 3 = 9 - 2x",
+    "answer": "2",
+    "check": {"question": "Solve 3x - 7 = 8 - 2x", "answer": "3"},
+    "explanations": {
+      "steps": "1. Add 2x to both sides to clear the negative x term: 6x - 3 = 9. 2. Add 3 to both sides: 6x = 12. 3. Divide both sides by 6: x = 2. 4. Check: 4(2) - 3 = 5 and 9 - 2(2) = 5. Gather every x term on the side that keeps the total positive.",
+      "analogy": "One tank is filling and starts 3 litres in debt, gaining 4 litres an hour. Another holds 9 litres and leaks 2 litres an hour. They are racing towards each other, so the 12 litre gap closes at 6 litres an hour: equal after 2 hours. Opposite signs mean the sides converge.",
+      "example": "Worked example: 5x - 1 = 11 - x. Add x to both sides: 6x - 1 = 11. Add 1: 6x = 12. Divide by 6: x = 2. Check: 5(2) - 1 = 9 and 11 - 2 = 9. Now you try 4x - 3 = 9 - 2x. Add 2x to both sides first."
+    }
+  },
+  {
+    "id": 7,
+    "question": "Solve 4x + 1 = 2x + 6",
+    "answer": "2.5",
+    "check": {"question": "Solve 6x + 2 = 4x + 9", "answer": "3.5"},
+    "explanations": {
+      "steps": "1. Subtract 2x from both sides: 2x + 1 = 6. 2. Subtract 1 from both sides: 2x = 5. 3. Divide both sides by 2: x = 2.5. 4. Check: 4(2.5) + 1 = 11 and 2(2.5) + 6 = 11. Never force a whole number. If the division is not exact, write a decimal or fraction.",
+      "analogy": "Two phone deals. Deal A: 1 pound upfront then 4 pounds a month. Deal B: 6 pounds upfront then 2 pounds a month. They cost the same halfway through month three. Nothing says the crossover lands neatly on a billing date, so 5 shared by 2 is 2.5, not nearly 3.",
+      "example": "Worked example: 8x + 3 = 4x + 10. Subtract 4x: 4x + 3 = 10. Subtract 3: 4x = 7. Divide by 4: x = 1.75. Check: 8(1.75) + 3 = 17 and 4(1.75) + 10 = 17. Now you try 4x + 1 = 2x + 6. The answer is not whole."
+    }
+  },
+  {
+    "id": 8,
+    "question": "Solve 3(x + 4) = 21",
+    "answer": "3",
+    "check": {"question": "Solve 4(x + 2) = 28", "answer": "5"},
+    "explanations": {
+      "steps": "1. Expand the bracket, multiplying the 3 by both terms: 3x + 12 = 21. 2. Subtract 12 from both sides: 3x = 9. 3. Divide both sides by 3: x = 3. 4. Check: 3(3 + 4) = 3(7) = 21. Shortcut: divide by 3 first to get x + 4 = 7, then subtract 4.",
+      "analogy": "Three identical party bags, each holding one mystery toy and four sweets, 21 items in total. Tip them out: 21 items is 3 toys plus 12 sweets, so the toys are 9 items, 3 each. Or never tip them: one bag is 21 shared by 3, which is 7, minus its 4 sweets.",
+      "example": "Worked example: 5(x + 2) = 35. Expand: 5x + 10 = 35. Subtract 10: 5x = 25. Divide by 5: x = 5. Check: 5(5 + 2) = 35. Now you try 3(x + 4) = 21. Multiply the 3 by both terms inside the bracket before anything else."
+    }
+  },
+  {
+    "id": 9,
+    "question": "Solve (x + 3)/4 = 5",
+    "answer": "17",
+    "check": {"question": "Solve (x - 2)/3 = 4", "answer": "14"},
+    "explanations": {
+      "steps": "1. The whole left side is divided by 4, so multiply both sides by 4: x + 3 = 20. 2. Subtract 3 from both sides: x = 17. 3. Check: (17 + 3)/4 = 20/4 = 5. Correct. Clear the denominator first: one multiplication wipes out the fraction completely.",
+      "analogy": "A pizza is cut into four equal slices and each slice weighs 5 ounces, so the whole pizza is 20 ounces. That whole pizza is the mystery number plus 3 ounces of crust, leaving 17. Put the pizza back together before you touch the crust.",
+      "example": "Worked example: (x + 5)/3 = 4. Multiply both sides by 3: x + 5 = 12. Subtract 5: x = 7. Check: (7 + 5)/3 = 4. Now you try (x + 3)/4 = 5. Multiply both sides by 4 first, then deal with the plus 3."
+    }
+  },
+  {
+    "id": 10,
+    "question": "Solve (3x + 1)/2 = 2(x - 1)",
+    "answer": "5",
+    "check": {"question": "Solve (4x + 2)/3 = 2(x - 2)", "answer": "7"},
+    "explanations": {
+      "steps": "1. Multiply both sides by 2 to clear the fraction: 3x + 1 = 4(x - 1). 2. Expand: 3x + 1 = 4x - 4. 3. Subtract 3x from both sides: 1 = x - 4. 4. Add 4: x = 5. 5. Check: (16)/2 = 8 and 2(4) = 8. Order: fraction out, bracket open, x terms collected.",
+      "analogy": "A recipe halves one mixture and doubles another, and the two bowls end up identical. Undo the halving first, doubling everything on both sides, so no halves survive. Then unpack the doubled bracket. Only now are both bowls plain lists of ingredients you can cancel off against each other.",
+      "example": "Worked example: (2x + 4)/3 = 2(x - 1). Multiply by 3: 2x + 4 = 6(x - 1). Expand: 2x + 4 = 6x - 6. Subtract 2x: 4 = 4x - 6. Add 6: 10 = 4x. Divide by 4: x = 2.5. Now you try (3x + 1)/2 = 2(x - 1)."
+    }
+  }
+]
